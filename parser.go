@@ -9,14 +9,14 @@ import (
 )
 
 type Parser struct {
-	raw io.Reader
+	raw            io.Reader
+	CurrentVersion *Version
+	CurrentSection *Section
 }
 
 type Changelog struct {
-	Title          string
-	CurrentVersion *Version
-	CurrentSection *Section
-	Versions       []*Version
+	Title    string
+	Versions []*Version
 }
 
 type Version struct {
@@ -47,7 +47,7 @@ func (p Parser) Parse() *Changelog {
 	}
 
 	// push last version to main data
-	cl.Versions = append(cl.Versions, cl.CurrentVersion)
+	cl.Versions = append(cl.Versions, p.CurrentVersion)
 
 	return cl
 }
@@ -67,8 +67,8 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 
 		v := p.VersionFactory()
 
-		if cl.CurrentVersion != nil {
-			cl.Versions = append(cl.Versions, cl.CurrentVersion)
+		if p.CurrentVersion != nil {
+			cl.Versions = append(cl.Versions, p.CurrentVersion)
 		}
 
 		lineSlice := strings.Split(line, "-")
@@ -79,7 +79,7 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 		v.Name = strings.TrimSpace(match[1])
 		v.Date = strings.TrimSpace(lineSlice[1])
 
-		cl.CurrentVersion = v
+		p.CurrentVersion = v
 
 		return
 	}
@@ -88,7 +88,7 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 
 	if matched {
 
-		if cl.CurrentVersion == nil {
+		if p.CurrentVersion == nil {
 			log.Fatal("Iterator became decoupled from version object")
 		}
 
@@ -97,24 +97,24 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 			Name: name,
 		}
 
-		if cl.CurrentSection != nil {
-			cl.CurrentVersion.Body = append(cl.CurrentVersion.Body, cl.CurrentSection)
+		if p.CurrentSection != nil {
+			p.CurrentVersion.Body = append(p.CurrentVersion.Body, p.CurrentSection)
 		}
 
-		cl.CurrentSection = section
+		p.CurrentSection = section
 	}
 
 	matched, _ = regexp.MatchString(`(?:^-)(?:\s)`, line)
 
 	if matched {
 
-		if cl.CurrentSection == nil {
+		if p.CurrentSection == nil {
 			log.Fatal("Iterator became decoupled from section object")
 		}
 
 		content := strings.TrimSpace(strings.TrimPrefix(line, "-"))
 
-		cl.CurrentSection.Content = append(cl.CurrentSection.Content, content)
+		p.CurrentSection.Content = append(p.CurrentSection.Content, content)
 
 	}
 
