@@ -65,13 +65,13 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 
 	if matched {
 
-		v := p.VersionFactory()
+		v := versionFactory()
 
 		if p.CurrentVersion != nil {
 			cl.Versions = append(cl.Versions, p.CurrentVersion)
 		}
 
-		lineSlice := strings.Split(line, "-")
+		lineSlice := strings.SplitN(line, "-", 2)
 
 		re := regexp.MustCompile(`(?:\[)(.*)(?:\])`)
 		match := re.FindStringSubmatch(lineSlice[0])
@@ -93,9 +93,7 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 		}
 
 		name := strings.TrimSpace(strings.TrimPrefix(line, "###"))
-		section := &Section{
-			Name: name,
-		}
+		section := sectionFactory(name)
 
 		if p.CurrentSection != nil {
 			p.CurrentVersion.Body = append(p.CurrentVersion.Body, p.CurrentSection)
@@ -120,6 +118,10 @@ func (p *Parser) handleLine(cl *Changelog, line string) {
 
 }
 
-func (p Parser) VersionFactory() *Version {
+func versionFactory() *Version {
 	return &Version{}
+}
+
+func sectionFactory(name string) *Section {
+	return &Section{Name: name}
 }
